@@ -31,11 +31,13 @@
     "jose": "^5.0.0",
     "jwt-decode": "^4.0.0",
     "react": "19.2.3",
+    "react-dom": "^19.2.3",
     "react-native": "0.85.3",
     "react-native-gesture-handler": "^2.14.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
+    "react-native-web": "^0.21.2",
     "zustand": "^4.4.1"
   },
   "devDependencies": {

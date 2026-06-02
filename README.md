@@ -5,7 +5,8 @@ Sistema de autenticación completo con FastAPI, GraphQL y React Native.
 ## 📋 Especificaciones
 
 - **Backend**: FastAPI + Strawberry GraphQL + SQLite
-- **Frontend**: React Native
+- **Frontend web**: React + Vite (`web/`) — **usar en clase**
+- **Frontend móvil**: React Native + Expo (`frontend/`) — opcional
 - **Autenticación**: JWT + bcrypt
 - **Roles**: Admin, Cliente
 - **Funcionalidades**: Login, Registro, Recuperación de contraseña, CRUD de usuarios
@@ -29,7 +30,10 @@ mvp-graphql-auth/
 │   │   └── middleware/  # Middleware
 │   ├── requirements.txt
 │   └── .env.example
-├── frontend/            # Aplicación React Native
+├── web/                 # Frontend web React + Vite (recomendado)
+│   ├── src/
+│   └── package.json
+├── frontend/            # App React Native (opcional)
 │   ├── src/
 │   │   ├── components/  # Componentes reutilizables
 │   │   ├── screens/     # Pantallas
@@ -52,12 +56,20 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-### Frontend
+### Frontend web (recomendado para clase)
+```bash
+cd web
+npm install
+npm run dev
+```
+Abre **http://localhost:5173** en el navegador.
+
+### Frontend móvil (Expo — opcional)
 ```bash
 cd frontend
 npm install --legacy-peer-deps
-cp .env.example .env
-npm start
+copy .env.example .env
+npm run web
 ```
 
 ### Usuario admin demo
@@ -71,6 +83,7 @@ npm start
 - ✅ 29 tests unitarios (`pytest test_services.py`)
 - ✅ CRUD completo vía GraphQL + pantallas móvil
 - ✅ JWT, bcrypt, autorización por roles
+- 📖 **[GUia_CLASE.md](./GUia_CLASE.md)** — cómo llevar, demo y sustentación
 
 ## 🔐 Seguridad
 

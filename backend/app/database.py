@@ -44,23 +44,30 @@ def get_db():
 
 def seed_default_admin():
     """
-    Crea usuario admin por defecto para demos si no existe.
-    Credenciales: admin@admin.com / Admin123!
+    Garantiza usuario admin demo: admin@admin.com / Admin123!
+    Restablece contraseña en cada arranque para demos de clase.
     """
     from app.models import User, UserRole
     from app.security import hash_password
 
+    demo_password = "Admin123!"
     db = SessionLocal()
     try:
-        existing = db.query(User).filter(User.email == "admin@admin.com").first()
-        if existing:
-            logger.debug("Usuario admin por defecto ya existe")
+        admin = db.query(User).filter(User.email == "admin@admin.com").first()
+        if admin:
+            admin.hashed_password = hash_password(demo_password)
+            admin.role = UserRole.ADMIN
+            admin.is_active = True
+            admin.is_verified = True
+            admin.full_name = admin.full_name or "Administrador"
+            db.commit()
+            logger.info("Usuario admin demo restablecido (admin@admin.com / Admin123!)")
             return
 
         admin = User(
             email="admin@admin.com",
             username="admin",
-            hashed_password=hash_password("Admin123!"),
+            hashed_password=hash_password(demo_password),
             full_name="Administrador",
             role=UserRole.ADMIN,
             is_active=True,
@@ -68,7 +75,7 @@ def seed_default_admin():
         )
         db.add(admin)
         db.commit()
-        logger.info("Usuario admin por defecto creado (admin@admin.com)")
+        logger.info("Usuario admin demo creado (admin@admin.com / Admin123!)")
     except Exception as e:
         db.rollback()
         logger.error(f"Error al crear usuario admin por defecto: {e}")
