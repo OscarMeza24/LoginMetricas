@@ -1,199 +1,173 @@
 /**
  * Pantalla de Home/Dashboard
- * ISO/IEC 25022: Interfaz principal post-autenticación
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import useAuthStore from '../store/authStore';
+import { ScreenShell, AppButton } from '../components';
+import { colors, spacing, typography, radius } from '../theme/tokens';
+
+const roleLabel = (role) => (role === 'admin' ? 'Administrador' : 'Cliente');
 
 const HomeScreen = ({ navigation }) => {
-  const { user, signOut, isLoading } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const signOut = useAuthStore((s) => s.signOut);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    Alert.alert('Cerrar Sesión', '¿Estás seguro de que deseas cerrar sesión?', [
-      { text: 'Cancelar', onPress: () => {} },
+  const handleLogout = () => {
+    Alert.alert('Cerrar sesión', '¿Estás seguro de que deseas cerrar sesión?', [
+      { text: 'Cancelar', style: 'cancel' },
       {
-        text: 'Cerrar Sesión',
+        text: 'Cerrar sesión',
+        style: 'destructive',
         onPress: async () => {
           setLoggingOut(true);
           try {
             await signOut();
           } catch (err) {
-            Alert.alert('Error', 'No se pudo cerrar sesión');
+            Alert.alert('Error', err.message || 'No se pudo cerrar sesión');
           } finally {
             setLoggingOut(false);
           }
         },
-        style: 'destructive',
       },
     ]);
   };
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hola, {user?.full_name || 'Usuario'}</Text>
-        <Text style={styles.role}>
-          Rol: {user?.role === 'admin' ? 'Administrador' : 'Cliente'}
-        </Text>
-      </View>
+    <ScreenShell
+      scrollable
+      title={`Hola, ${user?.fullName || user?.username || 'Usuario'}`}
+      subtitle={roleLabel(user?.role)}
+    >
+      <View style={styles.infoSection}>
+        <Text style={styles.sectionTitle}>Información de cuenta</Text>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Información de Cuenta</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{user?.email}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Usuario:</Text>
-            <Text style={styles.infoValue}>{user?.username}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Estado:</Text>
-            <Text style={[styles.infoValue, { color: user?.is_active ? '#22c55e' : '#ef4444' }]}>
-              {user?.is_active ? 'Activo' : 'Inactivo'}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Email</Text>
+          <Text style={styles.infoValue}>{user?.email || '—'}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Usuario</Text>
+          <Text style={styles.infoValue}>{user?.username || '—'}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Estado</Text>
+          <View
+            style={[
+              styles.badge,
+              user?.isActive ? styles.badgeActive : styles.badgeInactive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                user?.isActive ? styles.badgeTextActive : styles.badgeTextInactive,
+              ]}
+            >
+              {user?.isActive ? 'Activo' : 'Inactivo'}
             </Text>
           </View>
         </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <Text style={styles.actionButtonText}>Ver Perfil</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <Text style={styles.actionButtonText}>Cambiar Contraseña</Text>
-          </TouchableOpacity>
-
-          {user?.role === 'admin' && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.adminButton]}
-              onPress={() => navigation.navigate('Users')}
-            >
-              <Text style={styles.actionButtonText}>Gestionar Usuarios</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.logoutButton]}
-            onPress={handleLogout}
-            disabled={loggingOut}
-          >
-            {loggingOut ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.actionButtonText}>Cerrar Sesión</Text>
-            )}
-          </TouchableOpacity>
-        </View>
       </View>
-    </LinearGradient>
+
+      <View style={styles.actions}>
+        <AppButton
+          title="Ver perfil"
+          variant="surface"
+          onPress={() => navigation.navigate('Profile')}
+        />
+        <AppButton
+          title="Cambiar contraseña"
+          variant="outline"
+          onPress={() => navigation.navigate('ChangePassword')}
+        />
+        {user?.role === 'admin' && (
+          <AppButton
+            title="Gestionar usuarios"
+            variant="accent"
+            onPress={() => navigation.navigate('Users')}
+          />
+        )}
+        <AppButton
+          title="Cerrar sesión"
+          variant="danger"
+          onPress={handleLogout}
+          loading={loggingOut}
+          style={styles.logout}
+        />
+      </View>
+    </ScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 60,
+  infoSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 5,
-  },
-  role: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+  sectionTitle: {
+    fontFamily: typography.fontFamily.bold,
+    fontSize: typography.size.md,
+    color: colors.ink,
+    marginBottom: spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    paddingVertical: spacing.sm,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.size.sm,
+    color: colors.inkMuted,
   },
   infoValue: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.size.sm,
+    color: colors.ink,
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: spacing.md,
+  },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  badgeActive: {
+    backgroundColor: colors.successLight,
+  },
+  badgeInactive: {
+    backgroundColor: colors.errorLight,
+  },
+  badgeText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.size.xs,
+  },
+  badgeTextActive: {
+    color: colors.success,
+  },
+  badgeTextInactive: {
+    color: colors.error,
   },
   actions: {
-    gap: 10,
-    paddingBottom: 20,
+    gap: spacing.sm,
   },
-  actionButton: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  adminButton: {
-    backgroundColor: '#f59e0b',
-  },
-  logoutButton: {
-    backgroundColor: '#ef4444',
-  },
-  actionButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  logout: {
+    marginTop: spacing.sm,
   },
 });
 

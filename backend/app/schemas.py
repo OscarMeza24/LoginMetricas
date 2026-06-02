@@ -117,3 +117,26 @@ class ResetPasswordInput:
     """Input para reset de contraseña"""
     token: str
     new_password: str
+
+
+@strawberry.input
+class UpdateUserInput:
+    """Input para actualizar perfil de usuario"""
+    full_name: str
+    email: str
+    username: str
+
+
+@strawberry.type
+class UpdateUserResponse:
+    """Respuesta de actualización de usuario"""
+    success: bool
+    message: str
+    user: Optional[UserType]
+
+
+@strawberry.type
+class OperationResponse:
+    """Respuesta genérica de operaciones (activar, desactivar, eliminar)"""
+    success: bool
+    message: str

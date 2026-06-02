@@ -1,29 +1,19 @@
 /**
  * Pantalla de Login
- * ISO/IEC 25022: Formulario de autenticación seguro
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import useAuthStore from '../store/authStore';
+import { ScreenShell, AppButton, FormField } from '../components';
+import { colors, spacing, typography } from '../theme/tokens';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, error } = useAuthStore();
+  const signIn = useAuthStore((s) => s.signIn);
+  const error = useAuthStore((s) => s.error);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -33,163 +23,91 @@ const LoginScreen = ({ navigation }) => {
 
     setIsLoading(true);
     try {
-      await signIn(email, password);
-      // La navegación se maneja automáticamente por el store
+      await signIn(email.trim(), password);
     } catch (err) {
-      Alert.alert('Error de Login', error || 'No se pudo iniciar sesión');
+      Alert.alert('Error de login', err.message || error || 'No se pudo iniciar sesión');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
-      <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={false}
+    <ScreenShell
+      title="Bienvenido"
+      subtitle="Inicia sesión en tu cuenta"
+      keyboardAware
+    >
+      <FormField
+        label="Email"
+        inputProps={{
+          value: email,
+          onChangeText: setEmail,
+          placeholder: 'tu@email.com',
+          keyboardType: 'email-address',
+          editable: !isLoading,
+          autoComplete: 'email',
+        }}
+      />
+
+      <FormField
+        label="Contraseña"
+        inputProps={{
+          value: password,
+          onChangeText: setPassword,
+          placeholder: 'Tu contraseña',
+          secureTextEntry: true,
+          editable: !isLoading,
+          autoComplete: 'password',
+        }}
+      />
+
+      <TouchableOpacity
+        style={styles.forgotLink}
+        onPress={() => navigation.navigate('ForgotPassword')}
+        disabled={isLoading}
+        accessibilityRole="link"
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Bienvenido</Text>
-          <Text style={styles.subtitle}>Inicia sesión en tu cuenta</Text>
-        </View>
+        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
 
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="tu@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-              value={email}
-              onChangeText={setEmail}
-              placeholderTextColor="#999"
-            />
-          </View>
+      <AppButton
+        title="Iniciar sesión"
+        onPress={handleLogin}
+        loading={isLoading}
+        style={styles.submit}
+      />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Tu contraseña"
-              secureTextEntry
-              editable={!isLoading}
-              value={password}
-              onChangeText={setPassword}
-              placeholderTextColor="#999"
-            />
-          </View>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>¿No tienes cuenta? </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Register')}
+          disabled={isLoading}
+          accessibilityRole="link"
+        >
+          <Text style={styles.linkText}>Regístrate</Text>
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity
-            style={styles.forgotButton}
-            onPress={() => navigation.navigate('ForgotPassword')}
-            disabled={isLoading}
-          >
-            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.buttonText}>Iniciar Sesión</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Register')}
-              disabled={isLoading}
-            >
-              <Text style={styles.linkText}>Regístrate aquí</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAwareScrollView>
-    </LinearGradient>
+      <View style={styles.demoHint}>
+        <Text style={styles.demoTitle}>Demo admin</Text>
+        <Text style={styles.demoText}>admin@admin.com / Admin123!</Text>
+      </View>
+    </ScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  formContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-  },
-  forgotButton: {
-    alignItems: 'flex-end',
-    marginBottom: 20,
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.lg,
   },
   forgotText: {
-    color: '#667eea',
-    fontSize: 14,
-    fontWeight: '500',
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.size.sm,
+    color: colors.accent,
   },
-  button: {
-    backgroundColor: '#667eea',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  submit: {
+    marginBottom: spacing.lg,
   },
   footer: {
     flexDirection: 'row',
@@ -197,13 +115,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    color: '#666',
-    fontSize: 14,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.size.sm,
+    color: colors.inkMuted,
   },
   linkText: {
-    color: '#667eea',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.size.sm,
+    color: colors.primary,
+  },
+  demoHint: {
+    marginTop: spacing.xl,
+    padding: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  demoTitle: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.size.xs,
+    color: colors.primaryDark,
+    marginBottom: spacing.xs,
+  },
+  demoText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.size.sm,
+    color: colors.ink,
   },
 });
 

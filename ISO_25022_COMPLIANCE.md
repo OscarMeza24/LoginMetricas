@@ -2,211 +2,94 @@
 
 ## Introducción
 
-Este documento demuestra cómo el MVP GraphQL Authentication cumple con los principios de ISO/IEC 25022 (Medición de Calidad de Software).
+ISO/IEC **25022:2016** define medidas de **calidad en uso**: el efecto del software cuando usuarios reales lo utilizan en un contexto concreto. Se complementa con ISO/IEC **25023** (calidad del producto). Ver `ISO_25023_COMPLIANCE.md`.
 
-## ISO/IEC 25022: Medición de Calidad del Producto de Software
+Las cinco características de calidad en uso (modelo 25010):
 
-ISO/IEC 25022 proporciona un conjunto de métricas para medir la calidad del software en los siguientes aspectos:
+1. **Efectividad** – el usuario logra sus objetivos  
+2. **Eficiencia** – recursos mínimos para lograrlo  
+3. **Satisfacción** – experiencia agradable y clara  
+4. **Libertad de riesgo** – seguridad y privacidad percibidas  
+5. **Cobertura de contexto** – funciona en distintos dispositivos/contextos  
 
-### 1. **Funcionalidad**
+---
 
-#### ✅ Completitud Funcional
-- **Login**: Implementado con validación de credenciales
-- **Registro**: Con validación de email, contraseña fuerte y datos únicos
-- **Recuperación de Contraseña**: Flujo seguro con tokens de expiración
-- **Gestión de Usuarios**: Admin puede ver/desactivar usuarios
-- **Cambio de Contraseña**: Con verificación de contraseña actual
+## Medidas de calidad en uso
 
-**Archivos relevantes:**
-- `backend/app/services.py`: Implementación de lógica de negocio
-- `backend/app/resolvers.py`: Endpoints GraphQL
+| Característica | Medida | Cómo se evalúa en el MVP | Resultado | Evidencia |
+|----------------|--------|--------------------------|-----------|-----------|
+| **Efectividad** | Tasa de tareas completadas | Usuario registra cuenta, inicia sesión y edita perfil sin ayuda | **Alta** | Flujos en `LoginScreen`, `RegisterScreen`, `ProfileScreen` |
+| **Efectividad** | Precisión de tareas | Validaciones evitan datos inválidos antes de enviar al servidor | **Alta** | Validación cliente + servidor |
+| **Eficiencia** | Pasos para login | Campos requeridos: email + contraseña (2 campos, 1 acción) | **2 pasos** | `LoginScreen.js` |
+| **Eficiencia** | Pasos para registro | 5 campos en una pantalla, confirmación incluida | **1 pantalla** | `RegisterScreen.js` |
+| **Eficiencia** | Tiempo de feedback | Indicadores de carga en botones durante peticiones | **Inmediato** | `AppButton` con `loading` |
+| **Satisfacción** | Claridad de errores | Mensajes en español, específicos y accionables | **Alta** | Alerts con mensaje del servidor |
+| **Satisfacción** | Consistencia visual | Design system Impeccable (tokens, componentes) | **Alta** | `DESIGN.md`, `theme/tokens.js` |
+| **Satisfacción** | Legibilidad | DM Sans, contraste papel cálido / texto cálido oscuro | **Alta** | Sin texto gris sobre fondos de color |
+| **Libertad de riesgo** | Percepción de seguridad | Contraseña oculta, requisitos visibles, token en almacenamiento seguro | **Alta** | `expo-secure-store`, reglas de contraseña |
+| **Libertad de riesgo** | Privacidad | Mensajes genéricos en login/reset (no revelan si email existe) | **OK** | `services.py` login y reset |
+| **Libertad de riesgo** | Control de sesión | Logout limpia token; sesión restaurada solo si JWT válido | **OK** | `authStore.js` |
+| **Cobertura de contexto** | Multi-dispositivo | React Native + Expo (iOS, Android, Web) | **3 plataformas** | `package.json` scripts |
+| **Cobertura de contexto** | Roles de usuario | Admin gestiona usuarios; cliente gestiona su perfil | **OK** | `UsersScreen`, `HomeScreen` |
 
-#### Métrica: **Completitud = 100%** ✓
+---
 
-### 2. **Confiabilidad**
+## Demostración en clase (protocolo 25022)
 
-#### ✅ Manejo de Errores
-- Validaciones exhaustivas de entrada
-- Mensajes de error claros y seguros (no revelan información sensible)
-- Logging estructurado de eventos
-- Recuperación segura de excepciones
+### Escenario 1: Efectividad + Eficiencia (Login)
 
-```python
-# Ejemplo: No se revela si email existe o no
-if not user:
-    logger.warning(f"Usuario no encontrado: {email}")
-    return False, "Email o contraseña incorrectos", None  # Mensaje genérico
-```
+1. Abrir app → pantalla login  
+2. Ingresar `admin@admin.com` / `Admin123!`  
+3. **Medir:** ¿llegó al Home en ≤ 3 interacciones? → **Sí**  
+4. **Evidencia:** captura de Home con datos de usuario  
 
-#### ✅ Consistencia de Datos
-- Transacciones ACID en BD
-- Validación de datos antes de guardar
-- Restricciones de integridad (email y username únicos)
+### Escenario 2: Satisfacción (Recuperación de contraseña)
 
-**Archivos relevantes:**
-- `backend/app/services.py`: Validaciones y manejo de errores
-- `backend/app/database.py`: Gestión de transacciones
+1. Ir a "¿Olvidaste tu contraseña?"  
+2. Ingresar email → mensaje claro de confirmación  
+3. **Medir:** ¿el usuario entiende el siguiente paso sin documentación? → **Sí**  
 
-#### Métrica: **Disponibilidad esperada: 99.5%**
-#### Métrica: **Tasa de error: < 1%**
+### Escenario 3: Libertad de riesgo (Contraseña)
 
-### 3. **Usabilidad**
+1. Intentar registrar con contraseña débil  
+2. **Medir:** ¿el sistema bloquea y explica qué falta? → **Sí**  
+3. **Evidencia:** validación en `RegisterScreen` + `UserService.validate_password`  
 
-#### ✅ Interfaz de Usuario Clara
-- Pantallas intuitivas con validación visual
-- Mensajes de error descriptivos
-- Flujos lógicos y coherentes
-- Soporte para diferentes roles (Admin/Cliente)
+### Escenario 4: Cobertura de contexto (Admin)
 
-**Componentes:**
-- `frontend/src/screens/LoginScreen.js`
-- `frontend/src/screens/RegisterScreen.js`
-- `frontend/src/screens/ForgotPasswordScreen.js`
+1. Login como admin → "Gestionar usuarios"  
+2. Listar, desactivar, reactivar o eliminar un usuario de prueba  
+3. **Medir:** ¿admin completa gestión sin consola GraphQL? → **Sí**  
 
-#### ✅ Accesibilidad
-- Validación de requisitos de contraseña visible
-- Feedback visual de carga
-- Botones deshabilitados durante operaciones
+---
 
-**Métrica: **Facilidad de uso**: Excelente (5/5)**
+## Diseño orientado a calidad en uso (Impeccable)
 
-### 4. **Seguridad**
+El frontend aplica principios **Impeccable** para evitar patrones que degradan la experiencia:
 
-#### ✅ Autenticación Segura
-- JWT (JSON Web Tokens) para sesiones
-- Contraseñas hasheadas con bcrypt
-- Tokens con expiración
-- Validación de token en cliente
+| Anti-patrón evitado | Beneficio en uso (25022) |
+|---------------------|--------------------------|
+| Gradientes púrpura genéricos | Identidad clara → mayor satisfacción |
+| Texto gris sobre color | Legibilidad → menor frustración |
+| Tarjetas anidadas | Jerarquía clara → mayor efectividad |
+| Botones sin estado loading | Feedback inmediato → mayor eficiencia percibida |
 
-```python
-# Hashing seguro de contraseña
-user.hashed_password = hash_password(password)  # bcrypt
+Ver `frontend/DESIGN.md` para decisiones completas.
 
-# Token JWT con expiración
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    expire = datetime.now(timezone.utc) + timedelta(minutes=30)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-```
+---
 
-#### ✅ Validación de Entrada
-Requisitos de contraseña:
-- Mínimo 8 caracteres
-- Al menos 1 mayúscula
-- Al menos 1 minúscula
-- Al menos 1 número
-- Al menos 1 carácter especial
+## Tabla resumen
 
-#### ✅ Privacidad de Datos
-- Almacenamiento seguro con `expo-secure-store`
-- Contraseñas nunca se transmiten sin hash
-- JWT almacenado de forma segura en el cliente
+| Característica 25022 | Valoración MVP | Estado |
+|----------------------|----------------|--------|
+| Efectividad | Alta | ✅ |
+| Eficiencia | Alta (flujos cortos) | ✅ |
+| Satisfacción | Alta (UI consistente) | ✅ |
+| Libertad de riesgo | Alta (auth segura) | ✅ |
+| Cobertura de contexto | Multi-plataforma + roles | ✅ |
 
-**Archivos relevantes:**
-- `backend/app/security.py`: Funciones criptográficas
-- `frontend/src/services/graphqlClient.js`: Cliente seguro con autenticación
-
-#### Métrica: **Vulnerabilidades conocidas: 0** ✓
-
-### 5. **Mantenibilidad**
-
-#### ✅ Documentación
-- Comentarios exhaustivos en código
-- Docstrings en funciones
-- README con instrucciones
-- Estructura clara de carpetas
-
-#### ✅ Modularidad
-```
-backend/
-├── app/
-│   ├── main.py      # Punto de entrada
-│   ├── config.py    # Configuración centralizada
-│   ├── database.py  # Gestión de BD
-│   ├── models.py    # Modelos ORM
-│   ├── security.py  # Funciones criptográficas
-│   ├── services.py  # Lógica de negocio
-│   ├── schemas.py   # Tipos GraphQL
-│   └── resolvers.py # Endpoints GraphQL
-```
-
-#### ✅ Testing (Estructura lista para tests)
-- Servicios separados para facilitar testing
-- Dependencias inyectadas
-- Modelos y esquemas bien definidos
-
-#### Métrica: **Modularidad: Excelente**
-#### Métrica: **Ciclomaticidad: Baja (buena)**
-
-### 6. **Compatibilidad**
-
-#### ✅ Multiplataforma
-- Backend: Compatible con Windows, Linux, macOS
-- Frontend: React Native funciona en iOS y Android
-
-#### ✅ Estándares Abiertos
-- GraphQL (estándar de la industria)
-- REST como fallback si es necesario
-- JSON para intercambio de datos
-
-#### Métrica: **Plataformas soportadas: 4+**
-
-## Tabla de Métricas ISO/IEC 25022
-
-| Atributo | Métrica | Valor | Estado |
-|----------|---------|-------|--------|
-| **Funcionalidad** | Completitud de Funciones | 100% | ✅ |
-| **Confiabilidad** | Tasa de Fallos | < 1% | ✅ |
-| **Confiabilidad** | Disponibilidad | 99.5% | ✅ |
-| **Usabilidad** | Facilidad de Aprendizaje | Alto | ✅ |
-| **Usabilidad** | Satisfacción del Usuario | 5/5 | ✅ |
-| **Seguridad** | Vulnerabilidades | 0 | ✅ |
-| **Seguridad** | Fortaleza de Contraseña | Fuerte | ✅ |
-| **Mantenibilidad** | Documentación | Completa | ✅ |
-| **Mantenibilidad** | Modularidad | Excelente | ✅ |
-| **Compatibilidad** | Plataformas | 4+ | ✅ |
-
-## Evidencia en el Código
-
-### Logging y Monitoreo
-```python
-# ISO/IEC 25022: Logging estructurado
-logger.info(f"Login exitoso: {email}")
-logger.warning(f"Token inválido en verificación")
-logger.error(f"Error registrando usuario {email}: {e}")
-```
-
-### Validaciones Exhaustivas
-```python
-# ISO/IEC 25022: Validación de entrada
-def validate_password(password: str) -> tuple[bool, str]:
-    if len(password) < 8:
-        return False, "La contraseña debe tener al menos 8 caracteres"
-    if not re.search(r'[A-Z]', password):
-        return False, "La contraseña debe contener al menos una mayúscula"
-    # ... más validaciones
-```
-
-### Manejo de Errores Seguro
-```python
-# ISO/IEC 25022: No revelar información sensible
-if not user or not verify_password(password, user.hashed_password):
-    return False, "Email o contraseña incorrectos", None
-```
-
-## Implementación de Mejoras Futuras
-
-1. **Testing Automatizado**: Agregar pytest para backend y Jest para frontend
-2. **Rate Limiting**: Implementar límite de intentos de login
-3. **2FA**: Autenticación de dos factores
-4. **Auditoría**: Registro detallado de acciones de usuarios
-5. **Monitoreo**: Integración con herramientas de monitoreo (Sentry, etc.)
+---
 
 ## Conclusión
 
-El MVP GraphQL Authentication cumple con todos los principios de ISO/IEC 25022, proporcionando:
-- ✅ Software confiable y seguro
-- ✅ Interfaz intuitiva y usable
-- ✅ Código mantenible y documentado
-- ✅ Función completa según especificaciones
-- ✅ Arquitectura escalable y modular
+El MVP demuestra **calidad en uso** mediante flujos completos, feedback claro, seguridad perceptible y soporte multi-rol. Las medidas de **producto** (25023) se documentan por separado para una evaluación SQuaRE completa.

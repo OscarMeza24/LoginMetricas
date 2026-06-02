@@ -8,8 +8,9 @@ Sistema de autenticación completo con FastAPI, GraphQL y React Native.
 - **Frontend**: React Native
 - **Autenticación**: JWT + bcrypt
 - **Roles**: Admin, Cliente
-- **Funcionalidades**: Login, Registro, Recuperación de contraseña
-- **Normas**: ISO/IEC 25022 (Medición de Calidad de Software)
+- **Funcionalidades**: Login, Registro, Recuperación de contraseña, CRUD de usuarios
+- **Normas**: ISO/IEC 25022 (calidad en uso) + ISO/IEC 25023 (calidad de producto)
+- **Diseño frontend**: Impeccable (DM Sans, paleta cálida, sin anti-patrones AI)
 
 ## 📁 Estructura del Proyecto
 
@@ -54,18 +55,22 @@ python -m app.main
 ### Frontend
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
+cp .env.example .env
 npm start
 ```
 
-## 📊 Cumplimiento ISO/IEC 25022
+### Usuario admin demo
+- **Email:** `admin@admin.com`
+- **Contraseña:** `Admin123!`
 
-- ✅ Documentación clara
-- ✅ Pruebas unitarias
-- ✅ Logging estructurado
-- ✅ Manejo de errores
-- ✅ Seguridad (JWT, bcrypt)
-- ✅ Validaciones
+## 📊 Cumplimiento ISO/IEC 25022 y 25023
+
+- ✅ [ISO_25022_COMPLIANCE.md](./ISO_25022_COMPLIANCE.md) — calidad en uso
+- ✅ [ISO_25023_COMPLIANCE.md](./ISO_25023_COMPLIANCE.md) — calidad de producto
+- ✅ 29 tests unitarios (`pytest test_services.py`)
+- ✅ CRUD completo vía GraphQL + pantallas móvil
+- ✅ JWT, bcrypt, autorización por roles
 
 ## 🔐 Seguridad
 
