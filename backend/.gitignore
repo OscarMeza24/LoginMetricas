@@ -2,7 +2,11 @@
 node_modules/
 package-lock.json
 yarn.lock
-venv
+venv/
+__pycache__/
+*.py[cod]
+*.db
+.pytest_cache/
 
 # Environment
 .env

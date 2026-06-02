@@ -1,28 +1,26 @@
 /**
  * Pantalla de Splash
- * ISO/IEC 25022: Interfaz clara de carga
  */
 
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import useAuthStore from '../store/authStore';
+import { colors, spacing, typography } from '../theme/tokens';
 
 const SplashScreen = () => {
-  const { restoreToken } = useAuthStore();
+  const restoreToken = useAuthStore((s) => s.restoreToken);
 
   useEffect(() => {
     restoreToken();
-  }, []);
+  }, [restoreToken]);
 
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>MVP Auth</Text>
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={styles.subtitle}>Cargando...</Text>
-      </View>
-    </LinearGradient>
+    <View style={styles.container}>
+      <Text style={styles.title}>LoginMetricas</Text>
+      <Text style={styles.tagline}>Autenticación segura</Text>
+      <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+      <Text style={styles.subtitle}>Cargando…</Text>
+    </View>
   );
 };
 
@@ -31,20 +29,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  content: {
-    alignItems: 'center',
+    backgroundColor: colors.paper,
+    paddingHorizontal: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 30,
+    fontFamily: typography.fontFamily.bold,
+    fontSize: typography.size.xxl,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  tagline: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.size.sm,
+    color: colors.inkMuted,
+    marginBottom: spacing.xl,
+  },
+  loader: {
+    marginBottom: spacing.md,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#ffffff',
-    marginTop: 15,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.size.sm,
+    color: colors.inkMuted,
   },
 });
 

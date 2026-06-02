@@ -18,6 +18,19 @@ class UserService:
     """Servicio de gestión de usuarios"""
     
     @staticmethod
+    def validate_username(username: str) -> tuple[bool, str]:
+        """
+        Valida formato de nombre de usuario (3-100 caracteres alfanuméricos o _).
+        """
+        if len(username) < 3:
+            return False, "El nombre de usuario debe tener al menos 3 caracteres"
+        if len(username) > 100:
+            return False, "El nombre de usuario no puede exceder 100 caracteres"
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            return False, "El nombre de usuario solo puede contener letras, números y guión bajo"
+        return True, ""
+
+    @staticmethod
     def validate_email(email: str) -> bool:
         """
         Valida formato de email
@@ -347,6 +360,105 @@ class UserService:
         """
         return db.query(User).offset(skip).limit(limit).all()
     
+    @staticmethod
+    def update_user(
+        db: Session,
+        user_id: int,
+        full_name: str,
+        email: str,
+        username: str,
+    ) -> tuple[bool, str, Optional[User]]:
+        """
+        Actualiza full_name, email y username de un usuario.
+        """
+        logger.info(f"Actualizando usuario: {user_id}")
+
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            return False, "Usuario no encontrado", None
+
+        if not UserService.validate_email(email):
+            return False, "Formato de email inválido", None
+
+        valid_username, username_error = UserService.validate_username(username)
+        if not valid_username:
+            return False, username_error, None
+
+        if not full_name or not full_name.strip():
+            return False, "El nombre completo es obligatorio", None
+
+        existing_email = db.query(User).filter(
+            User.email == email,
+            User.id != user_id,
+        ).first()
+        if existing_email:
+            return False, "El email ya está registrado", None
+
+        existing_username = db.query(User).filter(
+            User.username == username,
+            User.id != user_id,
+        ).first()
+        if existing_username:
+            return False, "El nombre de usuario ya está registrado", None
+
+        try:
+            user.full_name = full_name.strip()
+            user.email = email
+            user.username = username
+            db.commit()
+            db.refresh(user)
+            logger.info(f"Usuario actualizado: {user_id}")
+            return True, "Usuario actualizado exitosamente", user
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error actualizando usuario {user_id}: {e}")
+            return False, "Error al actualizar usuario", None
+
+    @staticmethod
+    def activate_user(db: Session, user_id: int) -> tuple[bool, str]:
+        """
+        Reactiva un usuario desactivado.
+        """
+        logger.info(f"Activando usuario: {user_id}")
+
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            return False, "Usuario no encontrado"
+
+        if user.is_active:
+            return True, "El usuario ya está activo"
+
+        try:
+            user.is_active = True
+            db.commit()
+            logger.info(f"Usuario activado: {user_id}")
+            return True, "Usuario activado"
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error activando usuario {user_id}: {e}")
+            return False, "Error al activar usuario"
+
+    @staticmethod
+    def delete_user(db: Session, user_id: int) -> tuple[bool, str]:
+        """
+        Elimina permanentemente un usuario de la base de datos.
+        """
+        logger.info(f"Eliminando usuario (hard delete): {user_id}")
+
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            return False, "Usuario no encontrado"
+
+        try:
+            db.delete(user)
+            db.commit()
+            logger.info(f"Usuario eliminado: {user_id}")
+            return True, "Usuario eliminado permanentemente"
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error eliminando usuario {user_id}: {e}")
+            return False, "Error al eliminar usuario"
+
     @staticmethod
     def deactivate_user(db: Session, user_id: int) -> tuple[bool, str]:
         """

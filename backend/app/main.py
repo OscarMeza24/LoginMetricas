@@ -3,14 +3,24 @@ Aplicación principal FastAPI con GraphQL
 ISO/IEC 25022: Punto de entrada de la aplicación
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from sqlalchemy.orm import Session
 import strawberry
 from strawberry.fastapi import GraphQLRouter
 import logging
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, get_db
 from app.resolvers import Query, Mutation
+
+
+async def get_graphql_context(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Contexto GraphQL: request HTTP y sesión de BD por operación."""
+    return {"request": request, "db": db}
 
 # Configurar logging
 logging.basicConfig(
@@ -39,8 +49,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# GraphQL Router
-graphql_app = GraphQLRouter(schema)
+# GraphQL Router con contexto de autenticación
+graphql_app = GraphQLRouter(schema, context_getter=get_graphql_context)
 app.include_router(graphql_app, prefix="/graphql")
 
 

@@ -9,7 +9,9 @@ from sqlalchemy.orm import sessionmaker
 from app.database import Base
 from app.models import User
 from app.services import UserService
-from app.security import verify_password, create_access_token, decode_token
+from app.security import verify_password, create_access_token, decode_token, hash_password
+from app.models import User, UserRole
+from app import auth as auth_helpers
 
 
 # Configuración de BD en memoria para tests
@@ -212,6 +214,240 @@ class TestUserService:
         )
         
         assert success is False
+
+    def test_update_user_success(self, db_session):
+        """Test actualización exitosa de usuario"""
+        UserService.register_user(
+            db_session,
+            "update@example.com",
+            "updateuser",
+            "StrongPass123!",
+            "Original Name",
+        )
+
+        success, msg, user = UserService.update_user(
+            db_session,
+            user_id=1,
+            full_name="Updated Name",
+            email="updated@example.com",
+            username="updateduser",
+        )
+
+        assert success is True
+        assert user.email == "updated@example.com"
+        assert user.username == "updateduser"
+        assert user.full_name == "Updated Name"
+
+    def test_update_user_duplicate_email(self, db_session):
+        """Test que no permite email duplicado al actualizar"""
+        UserService.register_user(
+            db_session,
+            "user1@example.com",
+            "user1",
+            "StrongPass123!",
+            "User One",
+        )
+        UserService.register_user(
+            db_session,
+            "user2@example.com",
+            "user2",
+            "StrongPass456!",
+            "User Two",
+        )
+
+        success, msg, user = UserService.update_user(
+            db_session,
+            user_id=1,
+            full_name="User One",
+            email="user2@example.com",
+            username="user1",
+        )
+
+        assert success is False
+        assert "ya está registrado" in msg
+        assert user is None
+
+    def test_update_user_invalid_username(self, db_session):
+        """Test validación de username al actualizar"""
+        UserService.register_user(
+            db_session,
+            "user@example.com",
+            "validuser",
+            "StrongPass123!",
+            "Test User",
+        )
+
+        success, msg, user = UserService.update_user(
+            db_session,
+            user_id=1,
+            full_name="Test User",
+            email="user@example.com",
+            username="bad user!",
+        )
+
+        assert success is False
+        assert user is None
+
+    def test_deactivate_user_success(self, db_session):
+        """Test desactivación de usuario"""
+        UserService.register_user(
+            db_session,
+            "deact@example.com",
+            "deactuser",
+            "StrongPass123!",
+            "Deactivate User",
+        )
+
+        success, msg = UserService.deactivate_user(db_session, user_id=1)
+        assert success is True
+
+        user = UserService.get_user_by_id(db_session, 1)
+        assert user.is_active is False
+
+    def test_activate_user_success(self, db_session):
+        """Test reactivación de usuario"""
+        UserService.register_user(
+            db_session,
+            "react@example.com",
+            "reactuser",
+            "StrongPass123!",
+            "Reactivate User",
+        )
+        UserService.deactivate_user(db_session, user_id=1)
+
+        success, msg = UserService.activate_user(db_session, user_id=1)
+        assert success is True
+
+        user = UserService.get_user_by_id(db_session, 1)
+        assert user.is_active is True
+
+    def test_delete_user_hard_delete(self, db_session):
+        """Test eliminación permanente de usuario"""
+        UserService.register_user(
+            db_session,
+            "delete@example.com",
+            "deleteuser",
+            "StrongPass123!",
+            "Delete User",
+        )
+
+        success, msg = UserService.delete_user(db_session, user_id=1)
+        assert success is True
+        assert UserService.get_user_by_id(db_session, 1) is None
+
+
+class TestAuthHelpers:
+    """Tests de autorización JWT"""
+
+    @pytest.fixture
+    def admin_in_db(self, db_session):
+        admin = User(
+            email="admin@test.com",
+            username="admintest",
+            hashed_password=hash_password("AdminPass123!"),
+            full_name="Admin Test",
+            role=UserRole.ADMIN,
+            is_active=True,
+            is_verified=True,
+        )
+        db_session.add(admin)
+        db_session.commit()
+        db_session.refresh(admin)
+        return admin
+
+    @pytest.fixture
+    def client_in_db(self, db_session):
+        client = User(
+            email="client@test.com",
+            username="clienttest",
+            hashed_password=hash_password("ClientPass123!"),
+            full_name="Client Test",
+            role=UserRole.CLIENT,
+            is_active=True,
+            is_verified=True,
+        )
+        db_session.add(client)
+        db_session.commit()
+        db_session.refresh(client)
+        return client
+
+    def _fake_request(self, authorization: str | None):
+        class FakeRequest:
+            def __init__(self, auth_value):
+                self._auth_value = auth_value
+
+            @property
+            def headers(self):
+                class Headers:
+                    def __init__(self, auth_value):
+                        self._auth_value = auth_value
+
+                    def get(self, key):
+                        if key == "Authorization":
+                            return self._auth_value
+                        return None
+
+                return Headers(self._auth_value)
+
+        return FakeRequest(authorization)
+
+    def _fake_info(self, request):
+        class FakeInfo:
+            context = {}
+
+        info = FakeInfo()
+        info.context = {"request": request}
+        return info
+
+    def test_extract_bearer_token(self):
+        assert auth_helpers.extract_bearer_token("Bearer abc123") == "abc123"
+        assert auth_helpers.extract_bearer_token(None) is None
+        assert auth_helpers.extract_bearer_token("Basic xyz") is None
+
+    def test_resolve_auth_user_valid_token(self, db_session, admin_in_db):
+        token = create_access_token(
+            data={"sub": str(admin_in_db.id), "role": admin_in_db.role.value}
+        )
+        request = self._fake_request(f"Bearer {token}")
+        auth_user = auth_helpers.resolve_auth_user(request, db_session)
+
+        assert auth_user is not None
+        assert auth_user.user_id == admin_in_db.id
+        assert auth_user.role == UserRole.ADMIN
+
+    def test_require_admin_with_client_raises(self, db_session, client_in_db):
+        from strawberry.exceptions import GraphQLError
+
+        token = create_access_token(
+            data={"sub": str(client_in_db.id), "role": client_in_db.role.value}
+        )
+        request = self._fake_request(f"Bearer {token}")
+        info = self._fake_info(request)
+
+        with pytest.raises(GraphQLError, match="administrador"):
+            auth_helpers.require_admin(info, db_session)
+
+    def test_require_admin_success(self, db_session, admin_in_db):
+        token = create_access_token(
+            data={"sub": str(admin_in_db.id), "role": admin_in_db.role.value}
+        )
+        request = self._fake_request(f"Bearer {token}")
+        info = self._fake_info(request)
+
+        auth_user = auth_helpers.require_admin(info, db_session)
+        assert auth_user.user_id == admin_in_db.id
+
+    def test_require_self_or_admin_denied(self, db_session, client_in_db, admin_in_db):
+        from strawberry.exceptions import GraphQLError
+
+        token = create_access_token(
+            data={"sub": str(client_in_db.id), "role": client_in_db.role.value}
+        )
+        request = self._fake_request(f"Bearer {token}")
+        info = self._fake_info(request)
+
+        with pytest.raises(GraphQLError, match="permiso"):
+            auth_helpers.require_self_or_admin(info, db_session, admin_in_db.id)
 
 
 class TestSecurityFunctions:

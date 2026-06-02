@@ -7,21 +7,26 @@ import strawberry
 from typing import Optional
 from datetime import timedelta
 from sqlalchemy.orm import Session
-from fastapi import Depends
 
 from app.schemas import (
     UserType, LoginResponse, RegisterResponse, TokenResponse,
     ChangePasswordResponse, RequestPasswordResetResponse, ResetPasswordResponse,
     UserListResponse, LoginInput, RegisterInput, ChangePasswordInput,
-    RequestPasswordResetInput, ResetPasswordInput, UserRoleEnum
+    RequestPasswordResetInput, ResetPasswordInput, UserRoleEnum,
+    UpdateUserInput, UpdateUserResponse, OperationResponse,
 )
 from app.models import User
 from app.services import UserService
-from app.database import get_db
 from app.security import create_access_token, decode_token
+from app import auth as auth_helpers
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def get_db_from_info(info: strawberry.Info) -> Session:
+    """Obtiene la sesión de BD inyectada en el contexto GraphQL."""
+    return info.context["db"]
 
 
 def convert_user_to_type(user: User) -> UserType:
@@ -44,7 +49,7 @@ class Query:
     """Consultas GraphQL"""
     
     @strawberry.field
-    def verify_token(self, token: str, db: Session = Depends(get_db)) -> TokenResponse:
+    def verify_token(self, token: str, info: strawberry.Info) -> TokenResponse:
         """
         Verifica si un token JWT es válido
         
@@ -56,7 +61,8 @@ class Query:
             TokenResponse con validez del token
         """
         logger.info("Verificando token")
-        
+        db = get_db_from_info(info)
+
         payload = decode_token(token)
         if not payload:
             logger.warning("Token inválido en verificación")
@@ -79,12 +85,12 @@ class Query:
         
         return TokenResponse(
             valid=True,
-            user_id=user_id,
+            user_id=int(user_id),
             message="Token válido"
         )
     
     @strawberry.field
-    def get_user(self, user_id: int, db: Session = Depends(get_db)) -> Optional[UserType]:
+    def get_user(self, user_id: int, info: strawberry.Info) -> Optional[UserType]:
         """
         Obtiene información de un usuario
         
@@ -96,7 +102,8 @@ class Query:
             Información del usuario o None
         """
         logger.info(f"Obteniendo usuario: {user_id}")
-        
+        db = get_db_from_info(info)
+
         user = UserService.get_user_by_id(db, user_id)
         if not user:
             logger.warning(f"Usuario no encontrado: {user_id}")
@@ -107,9 +114,9 @@ class Query:
     @strawberry.field
     def list_users(
         self,
+        info: strawberry.Info,
         skip: int = 0,
         limit: int = 100,
-        db: Session = Depends(get_db)
     ) -> UserListResponse:
         """
         Lista todos los usuarios (solo para admin)
@@ -122,6 +129,8 @@ class Query:
         Returns:
             Lista de usuarios
         """
+        db = get_db_from_info(info)
+        auth_helpers.require_admin(info, db)
         logger.info(f"Listando usuarios (skip={skip}, limit={limit})")
         
         users = UserService.get_all_users(db, skip, limit)
@@ -141,7 +150,7 @@ class Mutation:
     def register(
         self,
         input: RegisterInput,
-        db: Session = Depends(get_db)
+        info: strawberry.Info,
     ) -> RegisterResponse:
         """
         Registra un nuevo usuario
@@ -155,7 +164,8 @@ class Mutation:
             RegisterResponse con resultado del registro
         """
         logger.info(f"Registro de nuevo usuario: {input.email}")
-        
+        db = get_db_from_info(info)
+
         success, message, user = UserService.register_user(
             db,
             input.email,
@@ -174,7 +184,7 @@ class Mutation:
     def login(
         self,
         input: LoginInput,
-        db: Session = Depends(get_db)
+        info: strawberry.Info,
     ) -> LoginResponse:
         """
         Autentica un usuario y retorna token JWT
@@ -188,7 +198,8 @@ class Mutation:
             LoginResponse con token y usuario
         """
         logger.info(f"Login intento: {input.email}")
-        
+        db = get_db_from_info(info)
+
         success, message, user = UserService.login_user(db, input.email, input.password)
         
         if not success:
@@ -199,10 +210,12 @@ class Mutation:
                 user=None
             )
         
-        # Crear token
         access_token_expires = timedelta(minutes=30)
         access_token = create_access_token(
-            data={"sub": str(user.id)},
+            data={
+                "sub": str(user.id),
+                "role": user.role.value,
+            },
             expires_delta=access_token_expires
         )
         
@@ -216,14 +229,42 @@ class Mutation:
         )
     
     @strawberry.mutation
+    def update_user(
+        self,
+        user_id: int,
+        input: UpdateUserInput,
+        info: strawberry.Info,
+    ) -> UpdateUserResponse:
+        """
+        Actualiza perfil de usuario (propietario o admin).
+        """
+        db = get_db_from_info(info)
+        auth_helpers.require_self_or_admin(info, db, user_id)
+        logger.info(f"Actualizando usuario: {user_id}")
+
+        success, message, user = UserService.update_user(
+            db,
+            user_id,
+            input.full_name,
+            input.email,
+            input.username,
+        )
+
+        return UpdateUserResponse(
+            success=success,
+            message=message,
+            user=convert_user_to_type(user) if user else None,
+        )
+
+    @strawberry.mutation
     def change_password(
         self,
         user_id: int,
         input: ChangePasswordInput,
-        db: Session = Depends(get_db)
+        info: strawberry.Info,
     ) -> ChangePasswordResponse:
         """
-        Cambia la contraseña de un usuario
+        Cambia la contraseña de un usuario (solo propio usuario o admin)
         
         Args:
             user_id: ID del usuario
@@ -233,8 +274,10 @@ class Mutation:
         Returns:
             ChangePasswordResponse con resultado
         """
+        db = get_db_from_info(info)
+        auth_helpers.require_self_or_admin(info, db, user_id)
         logger.info(f"Cambio de contraseña para usuario: {user_id}")
-        
+
         success, message = UserService.change_password(
             db,
             user_id,
@@ -251,7 +294,7 @@ class Mutation:
     def request_password_reset(
         self,
         input: RequestPasswordResetInput,
-        db: Session = Depends(get_db)
+        info: strawberry.Info,
     ) -> RequestPasswordResetResponse:
         """
         Solicita recuperación de contraseña
@@ -264,7 +307,8 @@ class Mutation:
             RequestPasswordResetResponse con resultado
         """
         logger.info(f"Solicitud de reset: {input.email}")
-        
+        db = get_db_from_info(info)
+
         success, message = UserService.request_password_reset(db, input.email)
         
         return RequestPasswordResetResponse(
@@ -276,7 +320,7 @@ class Mutation:
     def reset_password(
         self,
         input: ResetPasswordInput,
-        db: Session = Depends(get_db)
+        info: strawberry.Info,
     ) -> ResetPasswordResponse:
         """
         Completa el reset de contraseña
@@ -289,7 +333,8 @@ class Mutation:
             ResetPasswordResponse con resultado
         """
         logger.info("Reset de contraseña con token")
-        
+        db = get_db_from_info(info)
+
         success, message = UserService.reset_password(
             db,
             input.token,
@@ -305,23 +350,58 @@ class Mutation:
     def deactivate_user(
         self,
         user_id: int,
-        db: Session = Depends(get_db)
-    ) -> ChangePasswordResponse:
+        info: strawberry.Info,
+    ) -> OperationResponse:
         """
-        Desactiva un usuario
-        
-        Args:
-            user_id: ID del usuario
-            db: Sesión de BD
-            
-        Returns:
-            Respuesta con resultado
+        Desactiva un usuario (soft delete, solo admin)
         """
+        db = get_db_from_info(info)
+        auth_helpers.require_admin(info, db)
         logger.info(f"Desactivando usuario: {user_id}")
         
         success, message = UserService.deactivate_user(db, user_id)
         
-        return ChangePasswordResponse(
+        return OperationResponse(
             success=success,
             message=message
+        )
+
+    @strawberry.mutation
+    def activate_user(
+        self,
+        user_id: int,
+        info: strawberry.Info,
+    ) -> OperationResponse:
+        """
+        Reactiva un usuario desactivado (solo admin).
+        """
+        db = get_db_from_info(info)
+        auth_helpers.require_admin(info, db)
+        logger.info(f"Activando usuario: {user_id}")
+
+        success, message = UserService.activate_user(db, user_id)
+
+        return OperationResponse(
+            success=success,
+            message=message,
+        )
+
+    @strawberry.mutation
+    def delete_user(
+        self,
+        user_id: int,
+        info: strawberry.Info,
+    ) -> OperationResponse:
+        """
+        Elimina permanentemente un usuario (solo admin).
+        """
+        db = get_db_from_info(info)
+        auth_helpers.require_admin(info, db)
+        logger.info(f"Eliminando usuario: {user_id}")
+
+        success, message = UserService.delete_user(db, user_id)
+
+        return OperationResponse(
+            success=success,
+            message=message,
         )
