@@ -1,12 +1,11 @@
 # MVP GraphQL Authentication System
 
-Sistema de autenticación completo con FastAPI, GraphQL y React Native.
+Sistema de autenticación completo con FastAPI, GraphQL y React (Vite).
 
 ## 📋 Especificaciones
 
 - **Backend**: FastAPI + Strawberry GraphQL + SQLite
-- **Frontend web**: React + Vite (`web/`) — **usar en clase**
-- **Frontend móvil**: React Native + Expo (`frontend/`) — opcional
+- **Frontend web**: React + Vite (`web/`)
 - **Autenticación**: JWT + bcrypt
 - **Roles**: Admin, Cliente
 - **Funcionalidades**: Login, Registro, Recuperación de contraseña, CRUD de usuarios
@@ -30,18 +29,9 @@ mvp-graphql-auth/
 │   │   └── middleware/  # Middleware
 │   ├── requirements.txt
 │   └── .env.example
-├── web/                 # Frontend web React + Vite (recomendado)
+├── web/                 # Frontend React + Vite
 │   ├── src/
 │   └── package.json
-├── frontend/            # App React Native (opcional)
-│   ├── src/
-│   │   ├── components/  # Componentes reutilizables
-│   │   ├── screens/     # Pantallas
-│   │   ├── services/    # Servicios (GraphQL client)
-│   │   ├── utils/       # Utilidades
-│   │   └── App.js
-│   ├── package.json
-│   └── .env.example
 └── README.md
 ```
 
@@ -56,21 +46,13 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-### Frontend web (recomendado para clase)
+### Frontend web
 ```bash
 cd web
 npm install
 npm run dev
 ```
 Abre **http://localhost:5173** en el navegador.
-
-### Frontend móvil (Expo — opcional)
-```bash
-cd frontend
-npm install --legacy-peer-deps
-copy .env.example .env
-npm run web
-```
 
 ### Usuario admin demo
 - **Email:** `admin@admin.com`
@@ -81,7 +63,7 @@ npm run web
 - ✅ [ISO_25022_COMPLIANCE.md](./ISO_25022_COMPLIANCE.md) — calidad en uso
 - ✅ [ISO_25023_COMPLIANCE.md](./ISO_25023_COMPLIANCE.md) — calidad de producto
 - ✅ 29 tests unitarios (`pytest test_services.py`)
-- ✅ CRUD completo vía GraphQL + pantallas móvil
+- ✅ CRUD completo vía GraphQL + pantallas web
 - ✅ JWT, bcrypt, autorización por roles
 - 📖 **[GUia_CLASE.md](./GUia_CLASE.md)** — cómo llevar, demo y sustentación
 
