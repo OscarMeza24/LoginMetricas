@@ -1,0 +1,426 @@
+% LoginMetricas — Informe de sustentación (ISO 25022 / 25023)
+% Compilar en Overleaf: pdfLaTeX o XeLaTeX
+% Autor: completar nombre, matrícula y fecha antes de entregar
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\graphicspath{{imagenes/}}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{fancyhdr}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!70!black,
+  citecolor=blue!60!black
+}
+
+\definecolor{codebg}{RGB}{245,245,250}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!40},
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{gray},
+  stringstyle=\color{teal!60!black},
+  showstringspaces=false,
+  tabsize=2,
+  language=Python
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{LoginMetricas MVP}
+\rhead{ISO/IEC 25022 y 25023}
+\cfoot{\thepage}
+
+% === Datos institucionales ===
+\newcommand{\repoUrl}{https://github.com/OscarMeza24/LoginMetricas}
+\newcommand{\ramaRepo}{master}
+\newcommand{\fechaEntrega}{\today}
+
+\newlength{\anchoCaptura}
+\setlength{\anchoCaptura}{0.92\textwidth}
+\newcommand{\incluirCalidad}[1]{%
+  \begin{figure}[htbp]
+    \centering
+    \IfFileExists{imagenes/#1.png}{%
+      \includegraphics[width=\anchoCaptura,keepaspectratio]{#1.png}%
+    }{%
+      \IfFileExists{imagenes/#1.jpg}{%
+        \includegraphics[width=\anchoCaptura,keepaspectratio]{#1.jpg}%
+      }{%
+        \IfFileExists{imagenes/#1.jpeg}{%
+          \includegraphics[width=\anchoCaptura,keepaspectratio]{#1.jpeg}%
+        }{%
+          \fcolorbox{black!35}{gray!8}{%
+            \parbox[c][4cm][c]{0.85\textwidth}{\centering\small
+              Sube \texttt{imagenes/#1.png} (o .jpg) a Overleaf}%
+          }%
+        }%
+      }%
+    }%
+    \caption{#1}
+  \end{figure}
+}
+
+\begin{document}
+
+% --- Carátula ---
+\begin{titlepage}
+  \centering
+  \vspace*{1.2cm}
+  {\Large\bfseries UNIVERSIDAD LAICA ELOY ALFARO DE MANABÍ\par}
+  \vspace{0.6cm}
+  {\large\bfseries FACULTAD DE CIENCIA DE LA VIDA Y LA TECNOLOGÍA\par}
+  \vspace{2.2cm}
+
+  {\large\bfseries ASIGNATURA\par}
+  \vspace{0.35cm}
+  {\Large CALIDAD DE SOFTWARE\par}
+  \vspace{2cm}
+
+  {\large\bfseries TEMA\par}
+  \vspace{0.35cm}
+  {\Large\bfseries LoginMetricas\par}
+  \vspace{0.25cm}
+  {\normalsize MVP de autenticación y gestión de usuarios con FastAPI, GraphQL y React\par}
+  \vspace{0.2cm}
+  {\normalsize Cumplimiento ISO/IEC 25022:2016 e ISO/IEC 25023:2016\par}
+  \vspace{2.2cm}
+
+  {\large\bfseries AUTORES\par}
+  \vspace{0.5cm}
+  \begin{tabular}{c}
+    MEZA MERA OSCAR ANDRÉS \\[0.35cm]
+    FIGUEROA ARTEAGA LUIS EMILIO \\[0.35cm]
+    CHILE SILVE CARLOS JUNIOR \\
+  \end{tabular}
+  \vfill
+
+  {\large\bfseries DOCENTE\par}
+  \vspace{0.35cm}
+  ING. OSCAR BRIONES\par
+  \vspace{1.2cm}
+
+  {\large\bfseries PERIODO\par}
+  \vspace{0.35cm}`'
+  2026 -- 1\par
+  \vspace{1cm}
+  {\normalsize \fechaEntrega\par}
+\end{titlepage}
+\setcounter{page}{1}
+
+\begin{abstract}
+Este documento sustenta un \emph{Minimum Viable Product} (MVP) de autenticación y administración de usuarios, desarrollado con \textbf{FastAPI}, \textbf{GraphQL (Strawberry)} y \textbf{React (Vite)}. La evaluación de calidad sigue el marco \textbf{SQuaRE}: la norma \textbf{ISO/IEC 25023:2016} (calidad del \emph{producto}) y la \textbf{ISO/IEC 25022:2016} (calidad \emph{en uso}). Se documentan arquitectura, operaciones CRUD, medidas cuantitativas, evidencia en código, protocolo de demostración y resultados de pruebas automatizadas (\textbf{29/29} tests exitosos).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introducción}
+%==============================================================================
+
+El proyecto \textbf{LoginMetricas} responde a la necesidad de un sistema seguro de inicio de sesión, registro, recuperación de contraseña y gestión de usuarios con roles (\texttt{admin} y \texttt{cliente}). El repositorio del equipo está disponible en:
+
+\begin{center}
+  \url{\repoUrl} (rama \texttt{\ramaRepo})
+\end{center}
+
+\subsection{Objetivos}
+\begin{itemize}[noitemsep]
+  \item Implementar autenticación con JWT y contraseñas hasheadas (bcrypt).
+  \item Exponer un API GraphQL con CRUD completo sobre usuarios.
+  \item Ofrecer interfaz web usable para demostrar calidad en uso (ISO 25022).
+  \item Medir calidad de producto con métricas trazables y tests (ISO 25023).
+\end{itemize}
+
+\subsection{Stack tecnológico}
+\begin{table}[h]
+  \centering
+  \caption{Componentes del sistema}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Capa} & \textbf{Tecnología} & \textbf{Ubicación} \\
+    \midrule
+    Interfaz & React 19 + Vite 6 & \texttt{web/src/pages/} \\
+    Cliente API & Apollo Client & \texttt{web/src/services/} \\
+    API & FastAPI + Strawberry GraphQL & \texttt{backend/app/resolvers.py} \\
+    Negocio & Servicios Python & \texttt{backend/app/services.py} \\
+    Seguridad & JWT + bcrypt & \texttt{auth.py}, \texttt{security.py} \\
+    Persistencia & SQLite + SQLAlchemy & \texttt{models.py}, \texttt{database.py} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Relación entre ISO 25022 y 25023}
+\begin{itemize}[noitemsep]
+  \item \textbf{ISO/IEC 25023} evalúa propiedades del \emph{producto}: código, arquitectura, pruebas, seguridad implementada.
+  \item \textbf{ISO/IEC 25022} evalúa la calidad cuando un \emph{usuario real} utiliza el software: efectividad, eficiencia, satisfacción, etc.
+  \item Ambas normas se complementan dentro del marco SQuaRE (serie 25000).
+\end{itemize}
+
+%==============================================================================
+\section{Arquitectura y flujo de datos}
+%==============================================================================
+
+El flujo de una petición autenticada es:
+
+\[
+  \text{UI (React)} \rightarrow \text{Apollo Client} \rightarrow \text{GraphQL} \rightarrow \text{Resolvers} \rightarrow \text{Services} \rightarrow \text{SQLite}
+\]
+
+En \texttt{main.py}, la función \texttt{get\_graphql\_context} inyecta la sesión de base de datos y la petición HTTP en cada operación GraphQL, lo que permite validar el token JWT y el rol antes de ejecutar mutaciones sensibles.
+
+\subsection{Pantallas web (frontend)}
+Login, registro, recuperación de contraseña, inicio, perfil, cambio de contraseña y gestión de usuarios (solo administrador). El acceso a rutas privadas se controla con \texttt{PrivateRoute} en \texttt{App.jsx}.
+
+%==============================================================================
+\section{Operaciones GraphQL y CRUD}
+%==============================================================================
+
+\begin{table}[h]
+  \centering
+  \caption{Mapeo CRUD $\rightarrow$ operaciones GraphQL}
+  \small
+  \begin{tabular}{@{}clll@{}}
+    \toprule
+    \textbf{CRUD} & \textbf{Operación} & \textbf{GraphQL} & \textbf{Autorización} \\
+    \midrule
+    C & Crear usuario & \texttt{register} & Público \\
+    R & Leer uno & \texttt{getUser} & Autenticado \\
+    R & Listar & \texttt{listUsers} & Solo \texttt{admin} \\
+    U & Actualizar perfil & \texttt{updateUser} & Propio usuario o admin \\
+    U & Cambiar contraseña & \texttt{changePassword} & Propio usuario o admin \\
+    U & Reactivar & \texttt{activateUser} & Solo \texttt{admin} \\
+    D & Soft delete & \texttt{deactivateUser} & Solo \texttt{admin} \\
+    D & Hard delete & \texttt{deleteUser} & Solo \texttt{admin} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Operaciones adicionales de autenticación: \texttt{login}, \texttt{verifyToken}, \texttt{requestPasswordReset}, \texttt{resetPassword}.
+
+La autorización centralizada reside en \texttt{backend/app/auth.py} (\texttt{require\_admin}, \texttt{require\_self\_or\_admin}).
+
+\subsection{Ejemplo de mutación (login)}
+\begin{lstlisting}[language={},basicstyle=\ttfamily\footnotesize]
+mutation {
+  login(input: { email: "admin@admin.com", password: "Admin123!" }) {
+    success
+    message
+    accessToken
+    user { id email role }
+  }
+}
+\end{lstlisting}
+
+%==============================================================================
+\section{Cumplimiento ISO/IEC 25023:2016 (Calidad del producto)}
+%==============================================================================
+
+La norma define medidas alineadas con ISO/IEC 25010. La Tabla~\ref{tab:25023} resume las medidas aplicadas al MVP.
+
+\begin{longtable}{@{}p{2.2cm}p{2.4cm}p{3.2cm}p{1.6cm}p{1.4cm}p{2.6cm}@{}}
+  \caption{Medidas de calidad de producto (ISO/IEC 25023)} \label{tab:25023} \\
+  \toprule
+  \textbf{Caract.} & \textbf{Subcar.} & \textbf{Medida} & \textbf{Objetivo} & \textbf{Resultado} & \textbf{Evidencia} \\
+  \midrule
+  \endfirsthead
+  \multicolumn{6}{c}{\tablename\ \thetable\ -- \textit{Continúa}} \\
+  \toprule
+  \textbf{Caract.} & \textbf{Subcar.} & \textbf{Medida} & \textbf{Objetivo} & \textbf{Resultado} & \textbf{Evidencia} \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  Funcionalidad & Completitud & \% CRUD implementado & 100\% & \textbf{100\%} & register, get/list, update, delete \\
+  Funcionalidad & Corrección & Tests unitarios OK & $\geq$95\% & \textbf{100\%} & 29 tests pytest \\
+  Funcionalidad & Adecuación & Requisitos cubiertos & 100\% & \textbf{100\%} & Auth + roles + CRUD \\
+  Confiabilidad & Disponibilidad & Health check & OK & \textbf{OK} & \texttt{/health} \\
+  Confiabilidad & Tolerancia fallos & Rollback BD & Sí & \textbf{OK} & \texttt{services.py} \\
+  Seguridad & Confidencialidad & bcrypt & 100\% & \textbf{100\%} & \texttt{security.py} \\
+  Seguridad & Autenticidad & JWT Bearer & Sí & \textbf{OK} & \texttt{auth.py} \\
+  Seguridad & Integridad & Validación entrada & 100\% & \textbf{100\%} & email, password, username \\
+  Mantenibilidad & Modularidad & Capas separadas & $\geq$5 & \textbf{6} & models, services, resolvers... \\
+  Mantenibilidad & Analizabilidad & Documentación & Completa & \textbf{OK} & README, ISO docs \\
+  \bottomrule
+\end{longtable}
+
+\subsection{Métricas cuantitativas}
+
+\textbf{Completitud funcional CRUD:}
+\begin{equation}
+  M_{\text{CRUD}} = \frac{\text{operaciones implementadas}}{\text{operaciones requeridas}} \times 100 = 100\%
+\end{equation}
+
+\textbf{Índice de correctitud (pruebas):}
+\begin{equation}
+  M_{\text{tests}} = \frac{\text{tests exitosos}}{\text{tests totales}} \times 100 = \frac{29}{29} \times 100 = 100\%
+\end{equation}
+
+\textbf{Validación de entrada:}
+\begin{equation}
+  M_{\text{valid}} = \frac{5}{5} \times 100 = 100\%
+\end{equation}
+(validaciones: email, contraseña fuerte, username único, email único, expiración JWT).
+
+\textbf{Modularidad estructural:} $6/6$ módulos con responsabilidad única $= 100\%$.
+
+\subsection{Evidencia en código (seguridad)}
+\begin{lstlisting}
+def require_admin(info, db):
+    auth_user = require_auth(info, db)
+    if auth_user.role != UserRole.ADMIN:
+        raise GraphQLError("Se requiere rol de administrador")
+\end{lstlisting}
+
+\subsection{Pruebas automatizadas}
+Comando de verificación:
+\begin{lstlisting}[language=bash]
+cd backend
+source venv/bin/activate   # Python 3.11+
+python -m pytest test_services.py -v
+\end{lstlisting}
+\textbf{Resultado documentado:} 29 pruebas pasando (100\%). Requiere Python 3.10 o superior.
+
+%==============================================================================
+\section{Cumplimiento ISO/IEC 25022:2016 (Calidad en uso)}
+%==============================================================================
+
+La norma define cinco características de calidad en uso. La Tabla~\ref{tab:25022} las relaciona con evidencia observable en la aplicación web.
+
+\begin{table}[h]
+  \centering
+  \caption{Calidad en uso (ISO/IEC 25022)}
+  \label{tab:25022}
+  \small
+  \begin{tabular}{@{}p{3cm}p{4.2cm}p{2cm}p{4.5cm}@{}}
+    \toprule
+    \textbf{Característica} & \textbf{Medida} & \textbf{Resultado} & \textbf{Evidencia en MVP} \\
+    \midrule
+    Efectividad & Tareas completadas sin ayuda & Alta & Login demo, perfil, CRUD admin en UI \\
+    Eficiencia & Pasos para login & 2 campos + 1 clic & Botón ``Entrar con cuenta demo'' \\
+    Satisfacción & Claridad de errores & Alta & Mensajes en español \\
+    Satisfacción & Consistencia visual & Alta & DM Sans, paleta en \texttt{index.css} \\
+    Libertad de riesgo & Seguridad percibida & Alta & Contraseña oculta, JWT, roles \\
+    Libertad de riesgo & Privacidad & OK & Mensajes genéricos en login/reset \\
+    Cobertura de contexto & Roles admin/cliente & OK & Pantalla Usuarios solo admin \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Protocolo de demostración en clase}
+\begin{enumerate}[noitemsep]
+  \item Abrir \url{http://localhost:5173} y usar \textbf{Entrar con cuenta demo}.
+  \item Editar perfil en \texttt{/profile} (efectividad + satisfacción).
+  \item Gestionar usuarios: listar, desactivar, reactivar, eliminar (cobertura de contexto).
+  \item (Opcional) Registrar usuario con contraseña débil $\rightarrow$ validación visible.
+  \item (Opcional) GraphQL Playground en \url{http://localhost:8000/graphql}.
+  \item Ejecutar \texttt{pytest} y mostrar 29 tests en verde (complemento 25023).
+\end{enumerate}
+
+\subsection{Credenciales de demostración}
+\begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Email & \texttt{admin@admin.com} \\
+    Contraseña & \texttt{Admin123!} \\
+    Rol & Administrador \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+El usuario demo se crea o restablece al iniciar el backend (\texttt{seed\_default\_admin} en \texttt{database.py}).
+
+%==============================================================================
+\section{Procedimiento de ejecución}
+%==============================================================================
+
+\subsection{Backend}
+\begin{lstlisting}[language=bash]
+cd backend
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m app.main
+\end{lstlisting}
+Verificar: \url{http://localhost:8000/health}
+
+\subsection{Frontend web}
+\begin{lstlisting}[language=bash]
+cd web
+npm install
+npm run dev
+\end{lstlisting}
+Abrir: \url{http://localhost:5173} (proxy GraphQL en \texttt{/graphql}).
+
+%==============================================================================
+\section{Preguntas frecuentes del docente}
+%==============================================================================
+
+\begin{table}[h]
+  \centering
+  \small
+  \begin{tabular}{@{}p{4.5cm}p{9.5cm}@{}}
+    \toprule
+    \textbf{Pregunta} & \textbf{Respuesta} \\
+    \midrule
+    ¿Por qué GraphQL? & Endpoint tipado; el cliente solicita solo los campos necesarios; adecuado para auth y CRUD. \\
+    ¿Dónde está el CRUD? & \texttt{resolvers.py} (API) y \texttt{services.py} (reglas de negocio). \\
+    ¿Cómo miden 25023? & Tabla de medidas + fórmulas + \textbf{pytest} reproducible. \\
+    ¿Cómo miden 25022? & Protocolo de demo observable en navegador. \\
+    ¿Soft vs hard delete? & \texttt{deactivateUser} $\rightarrow$ \texttt{is\_active=false}; \texttt{deleteUser} borra el registro. \\
+    ¿Quién lista usuarios? & Solo rol \texttt{admin} (\texttt{require\_admin}). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Conclusiones}
+%==============================================================================
+
+El MVP \textbf{LoginMetricas} cumple el alcance funcional definido: autenticación JWT, registro, recuperación de contraseña, CRUD de usuarios con control por roles y documentación trazable. Las métricas ISO/IEC 25023 alcanzan \textbf{100\%} en completitud CRUD, correctitud (29/29 tests) y validación de entrada; las medidas ISO/IEC 25022 se demuestran mediante flujos de usuario verificables en la interfaz web. La evaluación SQuaRE queda respaldada por código, pruebas automatizadas y demostración en vivo.
+
+%==============================================================================
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+%==============================================================================
+
+\begin{itemize}[noitemsep]
+  \item ISO/IEC 25022:2016 --- Measurement of quality in use.
+  \item ISO/IEC 25023:2016 --- Measurement of system and software product quality.
+  \item ISO/IEC 25010:2011 --- System and software quality models (SQuaRE).
+  \item Repositorio del proyecto: \url{\repoUrl}
+\end{itemize}
+
+\newpage
+%==============================================================================
+\section*{Anexos: capturas de pantalla}
+\addcontentsline{toc}{section}{Anexos: capturas de pantalla}
+%==============================================================================
+
+Evidencia gráfica del MVP (carpeta \texttt{imagenes/} en Overleaf).
+
+\incluirCalidad{calidad1}
+\incluirCalidad{calidad2}
+\incluirCalidad{calidad3}
+\incluirCalidad{calidad4}
+\incluirCalidad{calidad5}
+
+\end{document}
