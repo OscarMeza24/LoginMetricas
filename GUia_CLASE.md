@@ -25,12 +25,12 @@ git checkout feature/mvp-completo-iso25022-25023
 
 Copia la carpeta `LoginMetricas` **sin** `node_modules` ni `venv`:
 
-- Excluir: `web/node_modules`, `frontend/node_modules`, `backend/venv`, `backend/__pycache__`
+- Excluir: `web/node_modules`, `backend/venv`, `backend/__pycache__`
 - En clase ejecutar `npm install` y `pip install -r requirements.txt`
 
-### Opción C — Fork propio
+### Opción C — Repositorio del equipo
 
-Si no tienes permiso de push en el repo del compañero, haz fork en GitHub y sube ahí.
+Repositorio principal (merge integrado): **https://github.com/OscarMeza24/LoginMetricas** — rama `master`.
 
 ---
 
@@ -74,7 +74,7 @@ Abre: **http://localhost:5173**
 
 | Capa | Tecnología | Archivo clave |
 |------|------------|---------------|
-| UI | React + Vite (`web/`) | `LoginPage.jsx`, `UsersPage.jsx` |
+| UI | React + Vite (`web/`) | `web/src/pages/LoginPage.jsx`, `UsersPage.jsx` |
 | API | GraphQL Strawberry | `backend/app/resolvers.py` |
 | Negocio | Servicios | `backend/app/services.py` |
 | Seguridad | JWT + bcrypt | `backend/app/auth.py`, `security.py` |
@@ -132,7 +132,7 @@ Abrir `ISO_25022_COMPLIANCE.md`:
 
 ## 5. Checklist antes de entrar a clase
 
-- [ ] Python 3.11+ instalado  
+- [ ] Python **3.11+** instalado (necesario para pytest; 3.9 falla)  
 - [ ] Node.js instalado  
 - [ ] Backend arranca (`/health` OK)  
 - [ ] Web arranca (`5173`)  
@@ -152,3 +152,9 @@ Abrir `ISO_25022_COMPLIANCE.md`:
 | Rol | Administrador |
 
 La contraseña se restablece al reiniciar el backend (seed en `database.py`).
+
+---
+
+## 7. Hoja de sustentación extendida
+
+Ver **[SUSTENTACION_CLASE.md](./SUSTENTACION_CLASE.md)** — guion completo, preguntas del docente, ejemplos GraphQL y checklist.
